@@ -1,0 +1,41 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rl"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
+    <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/layout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" >
+
+        <FrameLayout
+            android:id="@+id/cameraPreview_frame"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+        <ImageButton
+            android:id="@+id/button_takePicture"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:background="@drawable/button_round"
+            android:layout_gravity="bottom|center"
+            android:layout_marginBottom="16dp"
+            android:src="@drawable/ic_camera"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true"/>
+
+    </FrameLayout>
+    <FrameLayout
+        android:id="@+id/picturePreview_frame"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+        <ImageButton
+            android:id="@+id/button_closePicturePreview"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_close"
+            android:layout_margin="24dp"
+            android:scaleType="fitCenter"
+            android:padding="4dp"
+            android:adjustViewBounds="true"
+            android:background="@android:color/transparent"/>
+    </FrameLayout>
+</RelativeLayout>

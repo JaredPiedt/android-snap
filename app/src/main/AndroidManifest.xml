@@ -12,6 +12,11 @@
     <uses-permission android:name="android.permission.GET_ACCOUNTS" /> <!-- To auto-complete the email text field in the login form with the user's emails -->
     <uses-permission android:name="android.permission.READ_PROFILE" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.hardware.camera" />
+    <uses-permission android:name="android.hardware.camera.autofocus" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -19,7 +24,18 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
-            android:name="com.topsecret.androidsnap.LoginActivity"
+            android:name="co.tagalong.ui.LoginActivity"
+            android:excludeFromRecents="true"
+            android:label="@string/title_activity_main"
+            android:noHistory="true" >
+            <intent-filter android:label="@string/app_name">
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="co.tagalong.ui.MainActivity"
             android:label="@string/app_name"
             android:windowSoftInputMode="adjustResize|stateHidden" >
         </activity>
@@ -27,6 +43,15 @@
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />
+
+        <activity
+            android:name="co.tagalong.ui.CameraActivity"
+            android:label="@string/title_activity_camera"
+            android:parentActivityName="co.tagalong.ui.MainActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="co.tagalong.ui.MainActivity" />
+        </activity>
     </application>
 
 </manifest>
