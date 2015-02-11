@@ -1,4 +1,4 @@
-package com.topsecret.androidsnap;
+package co.tagalong;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

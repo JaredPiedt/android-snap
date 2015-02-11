@@ -1,4 +1,4 @@
-package com.topsecret.androidsnap;
+package co.tagalong.ui;
 
 import android.content.Intent;
 import android.content.IntentSender;
