@@ -22,6 +22,7 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
     <application
         android:allowBackup="true"
@@ -29,20 +30,18 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
-            android:name="co.tagalong.ui.LoginActivity"
-            android:excludeFromRecents="true"
-            android:label="@string/title_activity_main"
-            android:noHistory="true" >
-            <intent-filter android:label="@string/app_name" >
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
             android:name="co.tagalong.ui.MainActivity"
             android:label="@string/app_name"
-            android:windowSoftInputMode="adjustResize|stateHidden" >
+            android:windowSoftInputMode="adjustResize|stateHidden"
+            android:noHistory="true">
+
+            <!-- <intent-filter android:label="@string/app_name" > -->
+            <!-- &ndash;&gt; -->
+            <!-- <action android:name="android.intent.action.MAIN" /> -->
+
+
+            <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
+            <!-- </intent-filter> -->
         </activity>
 
         <meta-data
@@ -54,7 +53,8 @@
             android:label="@string/title_activity_camera"
             android:parentActivityName="co.tagalong.ui.MainActivity"
             android:screenOrientation="portrait"
-            android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen">
+            android:theme="@android:style/Theme.Holo.NoActionBar.Fullscreen"
+            android:windowSoftInputMode="stateVisible|adjustPan" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="co.tagalong.ui.MainActivity" />
@@ -63,10 +63,39 @@
             android:name="co.tagalong.ui.VideoPreviewActivity"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:label="@string/title_activity_video_preview"
-            android:parentActivityName="co.tagalong.ui.CameraActivity">
+            android:parentActivityName="co.tagalong.ui.CameraActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="co.tagalong.ui.CameraActivity" />
+        </activity>
+        <activity
+            android:name="co.tagalong.ui.WelcomeActivity"
+            android:excludeFromRecents="true"
+            android:label="@string/app_name"
+            android:noHistory="true" >
+            <intent-filter android:label="@string/app_name" >
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="co.tagalong.ui.LoginActivity"
+            android:label="@string/title_activity_login"
+            android:parentActivityName="co.tagalong.ui.WelcomeActivity"
+            android:windowSoftInputMode="adjustResize|stateVisible" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="co.tagalong.ui.WelcomeActivity" />
+        </activity>
+        <activity
+            android:name="co.tagalong.ui.SignUpActivity"
+            android:label="@string/app_name"
+            android:parentActivityName="co.tagalong.ui.WelcomeActivity"
+            android:windowSoftInputMode="adjustResize|stateVisible" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="co.tagalong.ui.WelcomeActivity" />
         </activity>
     </application>
 

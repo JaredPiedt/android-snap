@@ -1,9 +1,12 @@
 package co.tagalong.ui;
 
+import android.app.ActionBar;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Point;
 import android.hardware.Camera;
@@ -14,6 +17,9 @@ import android.os.AsyncTask;
 import android.os.Environment;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.Editable;
+import android.text.InputType;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Display;
 import android.view.KeyEvent;
@@ -21,19 +27,31 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.topsecret.androidsnap.R;
+
+import co.tagalong.ui.util.APIUtils;
 import co.tagalong.ui.util.UIUtils;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -44,22 +62,28 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
     private static final String TAG = "CameraActivity";
 
-    public static final int CAMERA_CAPTURE_IMAGE_REQUEST_CODE = 100;
+    private static final String IMAGE_DIRECTORY_NAME = "TagAlong";
+
     public static final int MEDIA_TYPE_IMAGE = 1;
     public static final int MEDIA_TYPE_VIDEO = 2;
 
     private Animation anim;
 
+    private float mDownY;
+    private final float SCROLL_THRESHOLD = 10;
+
     private Camera mCamera;
     private CameraPreview mPreview;
 
     private boolean longPress = false;
+    private boolean isClick = false;
 
     private Handler handler = new Handler();
     private FrameLayout mFrameCameraPreview;
     private FrameLayout mFrameCameraButtons;
     private FrameLayout mFramePicturePreview;
     private ImageView mImageView;
+    private EditText mEditTextCaption;
 
     private ProgressBar mProgressBar;
 
@@ -68,7 +92,6 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private MediaRecorder mMediaRecorder;
 
     private Camera.PictureCallback mPicture;
-    private static final String IMAGE_DIRECTORY_NAME = "TagAlong";
 
     private Uri mFileUri;
     private File mFile;
@@ -92,6 +115,21 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         mFrameCameraButtons = (FrameLayout) findViewById(R.id.frame_cameraButtons);
         mFramePicturePreview = (FrameLayout) findViewById(R.id.picturePreview_frame);
 
+        mEditTextCaption = (EditText) findViewById(R.id.caption);
+        mEditTextCaption.setOnClickListener(this);
+        mEditTextCaption.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                if(actionId == EditorInfo.IME_ACTION_DONE){
+                    mEditTextCaption.setFocusable(false);
+                    InputMethodManager mgr = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                    mgr.hideSoftInputFromWindow(mEditTextCaption.getWindowToken(), 0);
+                    return true;
+                }
+                return false;
+            }
+        });
+
         anim = AnimationUtils.loadAnimation(this, R.anim.scale_larger);
 
         resetProgressThread();
@@ -102,19 +140,96 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         mFrameCameraButtons.setVisibility(View.VISIBLE);
         mFramePicturePreview.setVisibility(View.GONE);
 
+        final float scale = getResources().getDisplayMetrics().density;
+        mEditTextCaption.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch(event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        mDownY = event.getY();
+                        isClick = true;
+                        return true;
+                    case MotionEvent.ACTION_UP:
+                        if(mDownY == event.getY())
+                        {
+                            Log.d(TAG, "Pressed");
+                            mEditTextCaption.requestFocus();
+                            mEditTextCaption.setCursorVisible(true);
+                            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                            imm.showSoftInput(mEditTextCaption, InputMethodManager.SHOW_IMPLICIT);
+                        }
+                        break;
+                    case MotionEvent.ACTION_MOVE:
+                        Log.d(TAG, "Moving text view");
+                        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) v.getLayoutParams();
+                        int top = params.topMargin;
+                        float delta = Math.abs(mDownY - event.getY());
+                        int height = v.getHeight();
+
+                        Log.d(TAG, "Height = " + height );
+                        int y = (int)event.getRawY() - (height / 2);
+                        Log.d(TAG, "Raw y = " + event.getRawY());
+                        Log.d(TAG, "Y = " + y);
+
+                        Log.d(TAG, "Delta = " + delta);
+                        if(delta > SCROLL_THRESHOLD) {
+                            params.topMargin = y;
+                            v.setLayoutParams(params);
+                            isClick = false;
+                        } else {
+                            isClick = true;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+                // Must return false if the event wasnt ACTION_MOVE
+                return false;
+            }
+        });
+
+        mEditTextCaption.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (hasFocus) {
+                    Log.d(TAG, "Has focus");
+//                    InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+//                    imm.showSoftInput(mEditTextCaption, InputMethodManager.SHOW_IMPLICIT);
+                }
+            }
+        });
+        mFramePicturePreview.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                float y = event.getY();
+
+                if(mEditTextCaption.getVisibility() == View.GONE) {
+                    FrameLayout.LayoutParams p = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT);
+                    p.topMargin = Math.round(y);
+                    mEditTextCaption.setLayoutParams(p);
+                    mEditTextCaption.setVisibility(View.VISIBLE);
+                    mEditTextCaption.setFocusable(true);
+                    Log.d(TAG, String.valueOf(y));
+                    return true;
+                }
+                return false;
+
+            }
+        });
+
         mButtonTakePicture = (ImageButton) findViewById(R.id.button_takePicture);
         mButtonTakePicture.setOnClickListener(this);
         mButtonTakePicture.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                if((event.getAction() == MotionEvent.ACTION_UP) && longPress) {
+                if ((event.getAction() == MotionEvent.ACTION_UP) && longPress) {
 
                     Log.d(TAG, "Camera button was released");
                     longPress = false;
                     mProgressBar.setVisibility(View.GONE);
                     try {
                         mMediaRecorder.stop();
-                        if(mProgressThread != null) {
+                        if (mProgressThread != null) {
                             mProgressThread.interrupt();
                             mProgressThread = null;
                         }
@@ -126,7 +241,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                         intent.putExtra("uri", Uri.fromFile(mFile).toString());
                         startActivity(intent);
                         return true;
-                    } catch(RuntimeException stopExecution) {
+                    } catch (RuntimeException stopExecution) {
                         Log.d(TAG, "Error stopping media recorder");
                         releaseMediaRecorder();
                         mCamera.lock();
@@ -146,7 +261,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
                 mProgressBar.setVisibility(View.VISIBLE);
                 // initialize video camera
-                if(prepareVideoRecorder()) {
+                if (prepareVideoRecorder()) {
                     // Camera is available and unlocked, MediaRecorder is prepared,
                     // now you can start recording
                     try {
@@ -188,6 +303,28 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
+                File file = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+                OutputStream outStream = null;
+
+                try {
+                    outStream = new FileOutputStream(file);
+
+                    Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                    //Matrix matrix = new Matrix();
+                    //matrix.postRotate(90);
+                    //Bitmap rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 85, outStream);
+                    outStream.flush();
+                    outStream.close();
+
+                    APIUtils.uploadFile(file);
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
                 mPreview.setFlash(false);
                 mButtonTakePicture.setVisibility(View.GONE);
                 mFrameCameraButtons.setVisibility(View.GONE);
@@ -216,7 +353,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             mCamera.startPreview();
             Log.d(TAG, "Preview started");
 
-        } catch(Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -252,10 +389,10 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     @Override
     public void onClick(View v) {
         int id = v.getId();
-        switch(id){
+        switch (id) {
             case R.id.button_takePicture:
                 Log.d(TAG, "Picture button pressed");
-                if(mButtonFlashOn.getVisibility() == View.VISIBLE) {
+                if (mButtonFlashOn.getVisibility() == View.VISIBLE) {
                     mPreview.setFlash(true);
                 }
                 mCamera.takePicture(null, null, mPicture);
@@ -263,6 +400,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             case R.id.button_closePicturePreview:
                 Log.d(TAG, "Close picture preview button pressed");
                 resetCameraPreview();
+                mEditTextCaption.setText("");
+                mEditTextCaption.setVisibility(View.GONE);
                 break;
             case R.id.button_flashOn:
                 mButtonFlashOn.setVisibility(View.GONE);
@@ -292,6 +431,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 mButtonCameraRear.setEnabled(true);
                 switchToRearCamera();
                 break;
+            case R.id.caption:
+                break;
             default:
                 break;
         }
@@ -301,8 +442,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         // Override back button so that when it's pressed, and the image preview is being
         // shown, it goes back to the camera preview.
-        if(keyCode == KeyEvent.KEYCODE_BACK) {
-            if(mFramePicturePreview.getVisibility() == View.VISIBLE) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (mFramePicturePreview.getVisibility() == View.VISIBLE) {
                 resetCameraPreview();
                 return true;
             } else {
@@ -326,7 +467,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     }
 
     private void releaseCamera() {
-        if(mCamera != null) {
+        if (mCamera != null) {
             mCamera.stopPreview();
             mPreview.setCamera(null);
             mCamera.release();
@@ -341,7 +482,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             mFrameCameraButtons.setVisibility(View.VISIBLE);
             mButtonTakePicture.setVisibility(View.VISIBLE);
 
-        } catch(Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
             Toast.makeText(this, "Camera not found", Toast.LENGTH_LONG).show();
         }
@@ -349,7 +490,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
     private void switchToFrontCamera() {
         int cameraId = findFrontFacingCamera();
-        if(cameraId >= 0) {
+        if (cameraId >= 0) {
             releaseCamera();
 
             try {
@@ -359,7 +500,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
                 mCamera.startPreview();
                 Log.d(TAG, "Switched to front facing camera");
 
-            } catch(Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
                 Toast.makeText(this, "Front camera not found", Toast.LENGTH_LONG).show();
             }
@@ -367,28 +508,29 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     }
 
     private void switchToRearCamera() {
-        if(mCamera != null) {
+        if (mCamera != null) {
             releaseCamera();
 
-            try{
+            try {
                 mCamera = Camera.open(0);
                 mPreview.setCamera(mCamera);
                 mPreview.refreshCamera();
                 mCamera.startPreview();
-            } catch(Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
                 Toast.makeText(this, "Rear camera not found", Toast.LENGTH_LONG).show();
             }
         }
     }
+
     private int findFrontFacingCamera() {
         int cameraId = -1;
 
         int numberOfCameras = Camera.getNumberOfCameras();
-        for(int i =0; i < numberOfCameras; i++) {
+        for (int i = 0; i < numberOfCameras; i++) {
             Camera.CameraInfo info = new Camera.CameraInfo();
             Camera.getCameraInfo(i, info);
-            if(info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
                 cameraId = i;
                 break;
             }
@@ -397,7 +539,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     }
 
     private void releaseMediaRecorder() {
-        if(mMediaRecorder != null) {
+        if (mMediaRecorder != null) {
             mMediaRecorder.reset();
             mMediaRecorder.release();
             mMediaRecorder = null;
@@ -410,7 +552,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         Camera.CameraInfo info = new Camera.CameraInfo();
         Camera.getCameraInfo(findFrontFacingCamera(), info);
 
-        if(mButtonCameraFront.getVisibility() == View.VISIBLE) {
+        if (mButtonCameraFront.getVisibility() == View.VISIBLE) {
             mMediaRecorder.setOrientationHint(270);
         } else {
             mMediaRecorder.setOrientationHint(90);
@@ -454,7 +596,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
             Log.d(TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());
             releaseMediaRecorder();
             return false;
-        } catch(IOException e){
+        } catch (IOException e) {
             Log.d(TAG, "IOException preparing MediaRecorder: " + e.getMessage());
             releaseMediaRecorder();
             return false;
@@ -475,17 +617,16 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
         Log.d(TAG, "Screen size = " + screenWidth + " x " + screenHeight);
         Log.d(TAG, "View size = " + width + " x " + height);
-        for(Camera.Size size : previewSizes){
-            if (size.width<=screenHeight && size.height<=screenWidth) {
-                if (result==null) {
-                    result=size;
-                }
-                else {
-                    int resultArea=result.width*result.height;
-                    int newArea=size.width*size.height;
+        for (Camera.Size size : previewSizes) {
+            if (size.width <= screenHeight && size.height <= screenWidth) {
+                if (result == null) {
+                    result = size;
+                } else {
+                    int resultArea = result.width * result.height;
+                    int newArea = size.width * size.height;
 
-                    if (newArea>resultArea) {
-                        result=size;
+                    if (newArea > resultArea) {
+                        result = size;
                     }
                 }
             }
@@ -498,10 +639,11 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     private void resetProgressThread() {
         mProgressThread = new Thread(new Runnable() {
             boolean shouldContinue = true;
+
             public void run() {
                 mProgressBar.setProgress(0);
                 progressStatus = 0;
-                while((progressStatus < 100)) {
+                while ((progressStatus < 100)) {
                     progressStatus += 1;
 
                     handler.post(new Runnable() {
@@ -512,14 +654,15 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
                     try {
                         Thread.sleep(100);
-                    } catch(InterruptedException e){
+                    } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
             }
         });
     }
-    class  BitmapWorkerTask extends AsyncTask<byte[], Void, Bitmap> {
+
+    class BitmapWorkerTask extends AsyncTask<byte[], Void, Bitmap> {
         private final WeakReference<ImageView> imageViewReference;
         private byte[] data = null;
 
@@ -530,7 +673,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
         // Decode image in background.
         @Override
-        protected Bitmap doInBackground(byte[]... params){
+        protected Bitmap doInBackground(byte[]... params) {
             data = params[0];
             Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
             Matrix matrix = new Matrix();
@@ -541,9 +684,9 @@ public class CameraActivity extends Activity implements View.OnClickListener {
 
         @Override
         protected void onPostExecute(Bitmap bitmap) {
-            if(imageViewReference != null && bitmap != null) {
+            if (imageViewReference != null && bitmap != null) {
                 final ImageView imageView = imageViewReference.get();
-                if(imageView != null) {
+                if (imageView != null) {
                     imageView.setImageBitmap(bitmap);
                 }
             }
@@ -557,8 +700,8 @@ public class CameraActivity extends Activity implements View.OnClickListener {
     public File getOutputMediaFile(int type) {
         File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), IMAGE_DIRECTORY_NAME);
 
-        if(!mediaStorageDir.exists()) {
-            if(!mediaStorageDir.mkdirs()) {
+        if (!mediaStorageDir.exists()) {
+            if (!mediaStorageDir.mkdirs()) {
                 Log.d(TAG, "Failed to create " + IMAGE_DIRECTORY_NAME + " directory");
                 return null;
             }
@@ -571,7 +714,7 @@ public class CameraActivity extends Activity implements View.OnClickListener {
         if (type == MEDIA_TYPE_IMAGE) {
             mediaFile = new File(mediaStorageDir.getPath() + File.separator
                     + "IMG_" + timeStamp + ".jpg");
-        }else if (type == MEDIA_TYPE_VIDEO) {
+        } else if (type == MEDIA_TYPE_VIDEO) {
             mediaFile = new File(mediaStorageDir.getPath() + File.separator +
                     "VID_" + timeStamp + ".mp4");
         } else {

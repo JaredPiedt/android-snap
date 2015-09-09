@@ -1,0 +1,46 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent" android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:orientation="vertical"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:background="@color/theme_primary"
+    android:gravity="center"
+    tools:context="co.tagalong.ui.WelcomeActivity">
+
+    <ImageView
+        android:id="@+id/imageView_welcomeLogo"
+        android:layout_height="100dp"
+        android:layout_width="100dp"
+        android:src="@drawable/logo"
+        android:layout_gravity="center"
+        android:layout_marginBottom="48dp"
+        />
+    <Button
+        android:id="@+id/button_login"
+        android:text="LOGIN"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="24dp"
+        android:paddingBottom="24dp"
+        android:background="@android:color/white"
+        android:textStyle="bold"
+        android:textSize="48sp"
+        android:textColor="@color/theme_primary"
+        android:layout_marginBottom="24dp"
+        />
+    <Button
+        android:id="@+id/button_signUp"
+        android:text="SIGN UP"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="24dp"
+        android:paddingBottom="24dp"
+        android:background="@android:color/white"
+        android:textStyle="bold"
+        android:textSize="48sp"
+        android:textColor="@color/theme_primary"
+        />
+
+</LinearLayout>

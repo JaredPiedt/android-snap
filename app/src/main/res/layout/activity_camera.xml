@@ -30,7 +30,7 @@
                 android:layout_height="56dp"
                 android:layout_gravity="bottom|center"
                 android:layout_marginBottom="16dp"
-                android:src="@drawable/ic_camera"
+                android:src="@drawable/camera_button_selector"
                 android:scaleType="fitCenter"
                 android:padding="0dp"
                 android:adjustViewBounds="true"
@@ -95,6 +95,17 @@
             android:padding="4dp"
             android:adjustViewBounds="true"
             android:background="@android:color/transparent"/>
+        <EditText
+            android:id="@+id/caption"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:singleLine="true"
+            android:background="@color/black_overlay"
+            android:visibility="gone"
+            android:gravity="center_horizontal"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"/>
         <ImageButton
             android:id="@+id/button_uploadPicture"
             android:layout_width="56dp"

@@ -10,5 +10,9 @@
     <string name="title_activity_video_preview">VideoPreviewActivity</string>
     <string name="dummy_button">Dummy Button</string>
     <string name="dummy_content">DUMMY\nCONTENT</string>
+    <string name="title_activity_welcome">WelcomeActivity</string>
+    <string name="preference_file_key">co.tagalong</string>
+    <string name="preference_api_key">api_key</string>
+    <string name="preference_username">username</string>
 
 </resources>
